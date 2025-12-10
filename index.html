@@ -19,10 +19,10 @@ KEYBOARD SHORTCUTS:
     Q=Anthony G.  W=Brittany  E=Floyd  R=Erin
 
   Constraints (A-S-D-F):
-    A=Buffer (Cook)
-    S=Staging (Mid-pack)
-    D=Docking (Mid-pack)
-    F=Focus (Expo)
+    A=Low Stock (Cook) - MidPack waiting for protein
+    S=Too Many (Mid-pack) - 5+ bowls visible on line
+    D=Split Order (Mid-pack) - Items not grouped together
+    F=Mixed Orders (Expo) - 2+ orders being worked
 
   Other:
     Z=Undo last log
@@ -35,7 +35,7 @@ TROUBLESHOOTING:
 
 NOTION DATABASE:
   Your data exports to: Skill Audit database
-  Properties: Name, Team Member, Station, Date, Buffer, Staging, Docking, Focus, Total Orders
+  Properties: Name, Team Member, Station, Date, Low Stock, Too Many, Split Order, Mixed Orders, Total Orders
 
   If you see property errors, ensure your Notion database has all required columns.
 
@@ -48,6 +48,22 @@ NOTION DATABASE:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HHG Skill Audit</title>
     <style>
+        /* Station Colors */
+        :root {
+            --station-cook: #ef4444;
+            --station-cook-bg: rgba(239, 68, 68, 0.1);
+            --station-midpack: #f97316;
+            --station-midpack-bg: rgba(249, 115, 22, 0.1);
+            --station-expo: #22c55e;
+            --station-expo-bg: rgba(34, 197, 94, 0.1);
+            --text-primary: #e2e8f0;
+            --text-muted: #64748b;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --border-color: #334155;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -56,8 +72,8 @@ NOTION DATABASE:
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
             padding: 16px;
         }
@@ -138,102 +154,249 @@ NOTION DATABASE:
             display: block;
         }
 
-        /* Matrix */
+        /* Matrix Container */
         .matrix-container {
-            background: #1e293b;
+            background: var(--bg-secondary);
             border-radius: 8px;
             padding: 16px;
             margin-bottom: 16px;
             overflow-x: auto;
         }
 
-        .matrix {
+        /* Desktop Table */
+        .audit-table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 600px;
         }
 
-        .matrix th, .matrix td {
-            border: 1px solid #334155;
-            padding: 8px;
+        .audit-table th, .audit-table td {
+            border: 1px solid var(--border-color);
+            padding: 10px 8px;
             text-align: center;
         }
 
-        .matrix th {
-            background: #334155;
-            font-weight: 600;
-            white-space: nowrap;
+        /* Station Header Row */
+        .station-row th {
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+            padding: 8px;
         }
 
-        .matrix th .key-badge {
+        .station-header-cook {
+            background: var(--station-cook-bg);
+            border-top: 3px solid var(--station-cook);
+            color: var(--station-cook);
+        }
+
+        .station-header-midpack {
+            background: var(--station-midpack-bg);
+            border-top: 3px solid var(--station-midpack);
+            color: var(--station-midpack);
+        }
+
+        .station-header-expo {
+            background: var(--station-expo-bg);
+            border-top: 3px solid var(--station-expo);
+            color: var(--station-expo);
+        }
+
+        /* Constraint Header Row */
+        .constraint-row th {
+            background: var(--bg-tertiary);
+            vertical-align: top;
+            padding: 8px 6px;
+        }
+
+        .constraint-header .constraint-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+
+        .constraint-header .constraint-key {
             display: inline-block;
             background: #3b82f6;
             color: white;
-            padding: 2px 8px;
+            padding: 2px 6px;
             border-radius: 4px;
-            font-size: 0.75rem;
-            margin-left: 6px;
+            font-size: 0.7rem;
+            margin: 4px 0;
+            font-weight: 600;
         }
 
-        .matrix th .station {
-            display: block;
-            font-size: 0.75rem;
-            color: #94a3b8;
+        .constraint-header .constraint-signal {
+            font-size: 0.7rem;
+            color: var(--text-muted);
             font-weight: 400;
         }
 
-        .matrix .person-cell {
+        /* Person Cell */
+        .audit-table .person-cell {
             text-align: left;
             white-space: nowrap;
-            background: #1e293b;
+            background: var(--bg-secondary);
+            padding: 10px 12px;
         }
 
-        .matrix .person-cell .key-badge {
+        .person-cell .key-hint {
             display: inline-block;
-            background: #64748b;
-            color: white;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
             padding: 2px 8px;
             border-radius: 4px;
             font-size: 0.75rem;
             margin-right: 8px;
             min-width: 24px;
             text-align: center;
+            font-weight: 600;
         }
 
-        .matrix .count-cell {
+        .person-cell .person-name {
+            font-weight: 500;
+        }
+
+        /* Count Cells */
+        .audit-table .cell {
             min-width: 80px;
             min-height: 44px;
             cursor: pointer;
             transition: all 0.15s ease;
-            background: #1e293b;
-            position: relative;
+            background: var(--bg-secondary);
+            font-size: 1.25rem;
+            font-weight: 600;
         }
 
-        .matrix .count-cell:hover {
-            background: #334155;
+        .audit-table .cell:hover {
+            background: var(--bg-tertiary);
         }
 
-        .matrix .count-cell:active {
+        .audit-table .cell:active {
             background: #3b82f6;
         }
 
-        .matrix .count-cell .count {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #94a3b8;
+        .cell-empty {
+            color: var(--text-muted);
         }
 
-        .matrix .count-cell .count.has-value {
+        .cell-active {
             color: #f97316;
         }
 
-        .matrix .count-cell.flash {
+        .audit-table .cell.flash {
             animation: flash-green 0.3s ease;
         }
 
         @keyframes flash-green {
             0% { background: #22c55e; }
-            100% { background: #1e293b; }
+            100% { background: var(--bg-secondary); }
+        }
+
+        /* Mobile Cards */
+        .mobile-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .person-card {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-name {
+            font-weight: 600;
+            font-size: 1rem;
+            letter-spacing: 0.02em;
+        }
+
+        .card-key {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .card-cells {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: var(--border-color);
+        }
+
+        .card-cell {
+            background: var(--bg-secondary);
+            padding: 12px 8px;
+            text-align: center;
+            cursor: pointer;
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            border-top: 3px solid;
+            transition: background 0.15s ease;
+        }
+
+        .card-cell:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .card-cell:active {
+            background: #3b82f6;
+        }
+
+        .card-cell-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .card-cell-name {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .card-cell-count {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .card-cell-count.active {
+            color: #f97316;
+        }
+
+        .card-cell.flash {
+            animation: flash-green 0.3s ease;
+        }
+
+        /* Responsive Breakpoints */
+        .desktop-table { display: table; }
+        .mobile-cards { display: none; }
+
+        @media (max-width: 767px) {
+            .desktop-table { display: none !important; }
+            .mobile-cards { display: flex !important; }
+        }
+
+        @media (min-width: 768px) {
+            .desktop-table { display: table; }
+            .mobile-cards { display: none; }
         }
 
         /* Controls */
@@ -618,10 +781,8 @@ NOTION DATABASE:
             </div>
         </header>
 
-        <div class="matrix-container">
-            <table class="matrix" id="matrix">
-                <!-- Rendered by JS -->
-            </table>
+        <div class="matrix-container" id="matrixContainer">
+            <!-- Rendered by JS: desktop-table or mobile-cards -->
         </div>
 
         <div class="controls">
@@ -744,36 +905,40 @@ NOTION DATABASE:
 
         const CONSTRAINTS = [
             {
-                id: 'buffer',
-                name: 'Buffer',
-                fullName: 'Buffer State',
+                id: 'lowstock',
+                name: 'Low Stock',
                 station: 'Cook',
                 key: 'a',
-                question: 'Is hot-hold at ≥80%?'
+                color: '#ef4444',  // Red
+                signal: 'MidPack waiting',
+                description: 'Hot-hold below 80%'
             },
             {
-                id: 'staging',
-                name: 'Staging',
-                fullName: 'Staging Limit',
+                id: 'toomany',
+                name: 'Too Many',
                 station: 'Mid-pack',
                 key: 's',
-                question: 'Are there ≤4 bowls?'
+                color: '#f97316',  // Orange
+                signal: '5+ bowls visible',
+                description: 'Overloaded assembly'
             },
             {
-                id: 'docking',
-                name: 'Docking',
-                fullName: 'Order Docking',
+                id: 'splitorder',
+                name: 'Split Order',
                 station: 'Mid-pack',
                 key: 'd',
-                question: 'All items grouped together?'
+                color: '#f97316',  // Orange
+                signal: 'Items not grouped',
+                description: 'Order scattered'
             },
             {
-                id: 'focus',
-                name: 'Focus',
-                fullName: 'Single Focus',
+                id: 'mixedorders',
+                name: 'Mixed Orders',
                 station: 'Expo',
                 key: 'f',
-                question: 'Only 1 order in work zone?'
+                color: '#22c55e',  // Green
+                signal: '2+ orders open',
+                description: 'Multiple bags'
             }
         ];
 
@@ -913,10 +1078,10 @@ NOTION DATABASE:
                 const counts = {};
                 TEAM.forEach(person => {
                     counts[person] = {
-                        buffer: 0,
-                        staging: 0,
-                        docking: 0,
-                        focus: 0
+                        lowstock: 0,
+                        toomany: 0,
+                        splitorder: 0,
+                        mixedorders: 0
                     };
                 });
                 LOG.data('initializeEmptyCounts', 'Empty counts', counts);
@@ -1088,64 +1253,42 @@ NOTION DATABASE:
         // ══════════════════════════════════════════════════════════════════════════════
         // UI RENDERING
         // ══════════════════════════════════════════════════════════════════════════════
+
+        // Debounce utility for resize handler
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function getCount(person, constraintId) {
+            return state.counts[person]?.[constraintId] || 0;
+        }
+
+        function getShortName(name) {
+            const shorts = {
+                'Low Stock': 'Low Stock',
+                'Too Many': 'Too Many',
+                'Split Order': 'Split',
+                'Mixed Orders': 'Mixed'
+            };
+            return shorts[name] || name;
+        }
+
         function renderMatrix() {
             LOG.enter('renderMatrix');
             try {
-                const matrix = document.getElementById('matrix');
-                const shiftTeam = getShiftTeam();
-
-                LOG.data('renderMatrix', 'Rendering employees', shiftTeam.length);
-
-                if (shiftTeam.length === 0) {
-                    matrix.innerHTML = '<tbody><tr><td style="padding: 24px; color: #94a3b8;">No employees selected. Click Settings to edit shift.</td></tr></tbody>';
-                    LOG.exit('renderMatrix', 'Empty shift');
-                    return;
+                if (window.innerWidth >= 768) {
+                    renderDesktopTable();
+                } else {
+                    renderMobileCards();
                 }
-
-                let html = '<thead><tr><th></th>';
-
-                // Header row with constraints
-                CONSTRAINTS.forEach(c => {
-                    html += `<th>
-                        ${c.name}<span class="key-badge">${c.key.toUpperCase()}</span>
-                        <span class="station">${c.station}</span>
-                    </th>`;
-                });
-                html += '</tr></thead><tbody>';
-
-                // Person rows - ONLY for shift employees
-                shiftTeam.forEach((person, displayIndex) => {
-                    const actualIndex = state.shiftEmployees[displayIndex];
-                    const keyHint = getPersonKeyHint(displayIndex);
-
-                    html += `<tr>
-                        <td class="person-cell">
-                            <span class="key-badge">${keyHint}</span>
-                            ${person}
-                        </td>`;
-
-                    CONSTRAINTS.forEach((constraint, constraintIndex) => {
-                        const count = state.counts[person]?.[constraint.id] || 0;
-                        html += `<td class="count-cell" data-person="${actualIndex}" data-constraint="${constraintIndex}">
-                            <span class="count ${count > 0 ? 'has-value' : ''}">${count > 0 ? count : ''}</span>
-                        </td>`;
-                    });
-
-                    html += '</tr>';
-                });
-
-                html += '</tbody>';
-                matrix.innerHTML = html;
-
-                // Attach click handlers
-                matrix.querySelectorAll('.count-cell').forEach(cell => {
-                    cell.addEventListener('click', () => {
-                        const personIndex = parseInt(cell.dataset.person);
-                        const constraintIndex = parseInt(cell.dataset.constraint);
-                        handleCellClick(personIndex, constraintIndex);
-                    });
-                });
-
                 LOG.exit('renderMatrix');
             } catch (err) {
                 LOG.error('renderMatrix', err);
@@ -1153,19 +1296,154 @@ NOTION DATABASE:
             }
         }
 
+        function renderDesktopTable() {
+            LOG.enter('renderDesktopTable');
+            try {
+                const container = document.getElementById('matrixContainer');
+                const shiftTeam = getShiftTeam();
+
+                if (shiftTeam.length === 0) {
+                    container.innerHTML = '<div style="padding: 24px; color: #94a3b8;">No employees selected. Click Settings to edit shift.</div>';
+                    LOG.exit('renderDesktopTable', 'Empty shift');
+                    return;
+                }
+
+                let html = `
+                    <table class="audit-table desktop-table">
+                        <thead>
+                            <!-- Station Header Row -->
+                            <tr class="station-row">
+                                <th></th>
+                                <th class="station-header-cook">COOK</th>
+                                <th colspan="2" class="station-header-midpack">MID-PACK</th>
+                                <th class="station-header-expo">EXPO</th>
+                            </tr>
+                            <!-- Constraint Header Row -->
+                            <tr class="constraint-row">
+                                <th></th>
+                                ${CONSTRAINTS.map(c => `
+                                    <th class="constraint-header">
+                                        <div class="constraint-name">${c.name}</div>
+                                        <div class="constraint-key">[${c.key.toUpperCase()}]</div>
+                                        <div class="constraint-signal">${c.signal}</div>
+                                    </th>
+                                `).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${shiftTeam.map((person, displayIndex) => {
+                                const actualIndex = state.shiftEmployees[displayIndex];
+                                const keyHint = getPersonKeyHint(displayIndex);
+                                const firstName = person.split(' ')[0];
+                                return `
+                                    <tr>
+                                        <td class="person-cell">
+                                            <span class="key-hint">[${keyHint}]</span>
+                                            <span class="person-name">${firstName}</span>
+                                        </td>
+                                        ${CONSTRAINTS.map((c, cIdx) => {
+                                            const count = getCount(person, c.id);
+                                            return `
+                                                <td class="cell ${count > 0 ? 'cell-active' : 'cell-empty'}"
+                                                    data-person="${actualIndex}"
+                                                    data-constraint="${cIdx}">
+                                                    ${count > 0 ? count : '—'}
+                                                </td>
+                                            `;
+                                        }).join('')}
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+
+                container.innerHTML = html;
+                attachCellClickHandlers();
+                LOG.exit('renderDesktopTable');
+            } catch (err) {
+                LOG.error('renderDesktopTable', err);
+                throw err;
+            }
+        }
+
+        function renderMobileCards() {
+            LOG.enter('renderMobileCards');
+            try {
+                const container = document.getElementById('matrixContainer');
+                const shiftTeam = getShiftTeam();
+
+                if (shiftTeam.length === 0) {
+                    container.innerHTML = '<div style="padding: 24px; color: #94a3b8;">No employees selected. Click Settings to edit shift.</div>';
+                    LOG.exit('renderMobileCards', 'Empty shift');
+                    return;
+                }
+
+                let html = '<div class="mobile-cards">';
+
+                shiftTeam.forEach((person, displayIndex) => {
+                    const actualIndex = state.shiftEmployees[displayIndex];
+                    const keyHint = getPersonKeyHint(displayIndex);
+                    const firstName = person.split(' ')[0].toUpperCase();
+
+                    html += `
+                        <div class="person-card">
+                            <div class="card-header">
+                                <span class="card-name">${firstName}</span>
+                                <span class="card-key">[${keyHint}]</span>
+                            </div>
+                            <div class="card-cells">
+                                ${CONSTRAINTS.map((c, cIdx) => {
+                                    const count = getCount(person, c.id);
+                                    const shortName = getShortName(c.name);
+                                    return `
+                                        <div class="card-cell"
+                                             style="border-top-color: ${c.color}"
+                                             data-person="${actualIndex}"
+                                             data-constraint="${cIdx}">
+                                            <div class="card-cell-dot" style="background: ${c.color}"></div>
+                                            <div class="card-cell-name">${shortName}</div>
+                                            <div class="card-cell-count ${count > 0 ? 'active' : ''}">${count > 0 ? count : '—'}</div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                container.innerHTML = html;
+                attachCellClickHandlers();
+                LOG.exit('renderMobileCards');
+            } catch (err) {
+                LOG.error('renderMobileCards', err);
+                throw err;
+            }
+        }
+
+        function attachCellClickHandlers() {
+            LOG.enter('attachCellClickHandlers');
+            try {
+                document.querySelectorAll('[data-person][data-constraint]').forEach(cell => {
+                    cell.addEventListener('click', () => {
+                        const personIndex = parseInt(cell.dataset.person);
+                        const constraintIndex = parseInt(cell.dataset.constraint);
+                        handleCellClick(personIndex, constraintIndex);
+                    });
+                });
+                LOG.exit('attachCellClickHandlers');
+            } catch (err) {
+                LOG.error('attachCellClickHandlers', err);
+                throw err;
+            }
+        }
+
         function updateCounts() {
             LOG.enter('updateCounts');
             try {
-                document.querySelectorAll('.count-cell').forEach(cell => {
-                    const personIndex = parseInt(cell.dataset.person);
-                    const constraintIndex = parseInt(cell.dataset.constraint);
-                    const person = TEAM[personIndex];
-                    const constraint = CONSTRAINTS[constraintIndex];
-                    const count = state.counts[person]?.[constraint.id] || 0;
-                    const countSpan = cell.querySelector('.count');
-                    countSpan.textContent = count > 0 ? count : '';
-                    countSpan.classList.toggle('has-value', count > 0);
-                });
+                // Re-render the matrix to update counts
+                renderMatrix();
                 LOG.exit('updateCounts');
             } catch (err) {
                 LOG.error('updateCounts', err);
@@ -1176,7 +1454,7 @@ NOTION DATABASE:
         function flashCell(personIndex, constraintIndex) {
             LOG.enter('flashCell', { personIndex, constraintIndex });
             try {
-                const cell = document.querySelector(`.count-cell[data-person="${personIndex}"][data-constraint="${constraintIndex}"]`);
+                const cell = document.querySelector(`[data-person="${personIndex}"][data-constraint="${constraintIndex}"]`);
                 if (cell) {
                     cell.classList.add('flash');
                     setTimeout(() => cell.classList.remove('flash'), 300);
@@ -1720,18 +1998,27 @@ NOTION DATABASE:
             try {
                 const aggregated = {};
 
+                // Map constraint names to IDs
+                const nameToId = {};
+                CONSTRAINTS.forEach(c => {
+                    nameToId[c.name] = c.id;
+                });
+
                 state.logs.forEach(log => {
                     if (!aggregated[log.person]) {
                         aggregated[log.person] = {
-                            buffer: 0,
-                            staging: 0,
-                            docking: 0,
-                            focus: 0,
+                            lowstock: 0,
+                            toomany: 0,
+                            splitorder: 0,
+                            mixedorders: 0,
                             station: log.station
                         };
                     }
-                    const constraintId = log.constraint.toLowerCase();
-                    aggregated[log.person][constraintId]++;
+                    // Get constraint ID from name
+                    const constraintId = nameToId[log.constraint] || log.constraint.toLowerCase().replace(/\s+/g, '');
+                    if (aggregated[log.person][constraintId] !== undefined) {
+                        aggregated[log.person][constraintId]++;
+                    }
                 });
 
                 LOG.data('aggregateLogsByPerson', 'Aggregated data', aggregated);
@@ -1798,17 +2085,17 @@ NOTION DATABASE:
                         'Date': {
                             date: { start: dateStr }
                         },
-                        'Buffer': {
-                            number: counts.buffer || 0
+                        'Low Stock': {
+                            number: counts.lowstock || 0
                         },
-                        'Staging': {
-                            number: counts.staging || 0
+                        'Too Many': {
+                            number: counts.toomany || 0
                         },
-                        'Docking': {
-                            number: counts.docking || 0
+                        'Split Order': {
+                            number: counts.splitorder || 0
                         },
-                        'Focus': {
-                            number: counts.focus || 0
+                        'Mixed Orders': {
+                            number: counts.mixedorders || 0
                         },
                         'Total Orders': {
                             number: totalOrders
@@ -2008,6 +2295,9 @@ NOTION DATABASE:
                         hideModal();
                     }
                 });
+
+                // Re-render on resize for responsive layout
+                window.addEventListener('resize', debounce(renderMatrix, 250));
 
                 LOG.exit('init', 'Initialization complete');
             } catch (err) {
