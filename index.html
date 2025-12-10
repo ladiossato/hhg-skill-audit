@@ -1072,6 +1072,58 @@ NOTION DATABASE:
         // ══════════════════════════════════════════════════════════════════════════════
         // STATE MANAGEMENT
         // ══════════════════════════════════════════════════════════════════════════════
+
+        // Migration map: old constraint IDs → new constraint IDs
+        const CONSTRAINT_MIGRATION = {
+            'buffer': 'lowstock',
+            'staging': 'toomany',
+            'docking': 'splitorder',
+            'focus': 'mixedorders'
+        };
+
+        function migrateConstraintKeys(counts) {
+            LOG.enter('migrateConstraintKeys');
+            try {
+                const migrated = {};
+                let hasMigration = false;
+
+                for (const person in counts) {
+                    migrated[person] = {
+                        lowstock: 0,
+                        toomany: 0,
+                        splitorder: 0,
+                        mixedorders: 0
+                    };
+
+                    // Check if old keys exist and migrate them
+                    for (const oldKey in CONSTRAINT_MIGRATION) {
+                        if (counts[person][oldKey] !== undefined && counts[person][oldKey] > 0) {
+                            const newKey = CONSTRAINT_MIGRATION[oldKey];
+                            migrated[person][newKey] = counts[person][oldKey];
+                            hasMigration = true;
+                        }
+                    }
+
+                    // Also copy any new keys that already exist
+                    for (const newKey of ['lowstock', 'toomany', 'splitorder', 'mixedorders']) {
+                        if (counts[person][newKey] !== undefined && counts[person][newKey] > 0) {
+                            migrated[person][newKey] = counts[person][newKey];
+                        }
+                    }
+                }
+
+                if (hasMigration) {
+                    LOG.data('migrateConstraintKeys', 'Migrated old keys to new', migrated);
+                }
+
+                LOG.exit('migrateConstraintKeys', hasMigration ? 'Migration performed' : 'No migration needed');
+                return migrated;
+            } catch (err) {
+                LOG.error('migrateConstraintKeys', err);
+                throw err;
+            }
+        }
+
         function initializeEmptyCounts() {
             LOG.enter('initializeEmptyCounts');
             try {
@@ -1126,6 +1178,12 @@ NOTION DATABASE:
                 // Ensure shiftEmployees exists (for sessions created before this update)
                 if (!state.shiftEmployees) {
                     state.shiftEmployees = [];
+                }
+
+                // Migrate old constraint keys to new ones (buffer→lowstock, etc.)
+                if (state.counts) {
+                    state.counts = migrateConstraintKeys(state.counts);
+                    saveState();  // Save migrated state
                 }
 
                 LOG.state('loadState', 'state', null, state);
@@ -1214,9 +1272,14 @@ NOTION DATABASE:
                 const lastLog = state.logs.pop();
                 LOG.data('undoLastLog', 'Removed log', lastLog);
 
-                const constraintId = lastLog.constraint.toLowerCase();
-                const oldCount = state.counts[lastLog.person][constraintId];
-                state.counts[lastLog.person][constraintId]--;
+                // Map constraint name to ID
+                const constraint = CONSTRAINTS.find(c => c.name === lastLog.constraint);
+                const constraintId = constraint ? constraint.id : lastLog.constraint.toLowerCase().replace(/\s+/g, '');
+
+                const oldCount = state.counts[lastLog.person][constraintId] || 0;
+                if (state.counts[lastLog.person][constraintId] > 0) {
+                    state.counts[lastLog.person][constraintId]--;
+                }
                 LOG.state('undoLastLog', `counts.${lastLog.person}.${constraintId}`, oldCount, state.counts[lastLog.person][constraintId]);
 
                 saveState();
