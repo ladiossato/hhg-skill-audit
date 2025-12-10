@@ -1,0 +1,2023 @@
+<!--
+═══════════════════════════════════════════════════════════════════════════════
+HHG SKILL AUDIT - READY TO USE
+═══════════════════════════════════════════════════════════════════════════════
+
+SETUP: None required. Just double-click this file to open in your browser.
+
+USAGE:
+  1. Click any cell to log a constraint violation
+  2. Or use keyboard: Press person key (1-9, 0, Q, W, E, R) then A/S/D/F
+  3. Press Z to undo last log
+  4. Click "Export to Notion" when done - enter total orders when prompted
+  5. Data syncs to your Notion database automatically
+
+KEYBOARD SHORTCUTS:
+  People (1-9, 0, Q-R):
+    1=Lydell  2=Efrain  3=Ismael  4=Lizbeth  5=Anthony E.
+    6=David S.  7=Refugio  8=Sarah  9=Edgar  0=David C.
+    Q=Anthony G.  W=Brittany  E=Floyd  R=Erin
+
+  Constraints (A-S-D-F):
+    A=Buffer (Cook)
+    S=Staging (Mid-pack)
+    D=Docking (Mid-pack)
+    F=Focus (Expo)
+
+  Other:
+    Z=Undo last log
+    Escape=Cancel pending selection
+
+TROUBLESHOOTING:
+  • Open browser console (F12) to see detailed logs
+  • All actions are logged with timestamps
+  • If Notion export fails, use "Download JSON" as backup
+
+NOTION DATABASE:
+  Your data exports to: Skill Audit database
+  Properties: Name, Team Member, Station, Date, Buffer, Staging, Docking, Focus, Total Orders
+
+  If you see property errors, ensure your Notion database has all required columns.
+
+═══════════════════════════════════════════════════════════════════════════════
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HHG Skill Audit</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 16px 24px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 24px;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .header-stats span {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+
+        /* Audit Date Picker */
+        .audit-date-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        #auditDate {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            color: #e2e8f0;
+            padding: 4px 8px;
+            font-size: 0.875rem;
+        }
+
+        #auditDate:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        #auditDate::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+
+        /* Pending indicator */
+        .pending-indicator {
+            background: #f97316;
+            color: #0f172a;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .pending-indicator.active {
+            display: block;
+        }
+
+        /* Matrix */
+        .matrix-container {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+        }
+
+        .matrix {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+
+        .matrix th, .matrix td {
+            border: 1px solid #334155;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .matrix th {
+            background: #334155;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .matrix th .key-badge {
+            display: inline-block;
+            background: #3b82f6;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-left: 6px;
+        }
+
+        .matrix th .station {
+            display: block;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: 400;
+        }
+
+        .matrix .person-cell {
+            text-align: left;
+            white-space: nowrap;
+            background: #1e293b;
+        }
+
+        .matrix .person-cell .key-badge {
+            display: inline-block;
+            background: #64748b;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-right: 8px;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .matrix .count-cell {
+            min-width: 80px;
+            min-height: 44px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            background: #1e293b;
+            position: relative;
+        }
+
+        .matrix .count-cell:hover {
+            background: #334155;
+        }
+
+        .matrix .count-cell:active {
+            background: #3b82f6;
+        }
+
+        .matrix .count-cell .count {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+
+        .matrix .count-cell .count.has-value {
+            color: #f97316;
+        }
+
+        .matrix .count-cell.flash {
+            animation: flash-green 0.3s ease;
+        }
+
+        @keyframes flash-green {
+            0% { background: #22c55e; }
+            100% { background: #1e293b; }
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        /* Keyboard Guide */
+        .keyboard-guide {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .keyboard-guide kbd {
+            background: #334155;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #e2e8f0;
+        }
+
+        /* Recent Logs */
+        .recent-logs {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .recent-logs h3 {
+            font-size: 1rem;
+            margin-bottom: 12px;
+            color: #94a3b8;
+        }
+
+        .recent-logs-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-bottom: 1px solid #334155;
+            font-size: 0.9rem;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-entry .person {
+            color: #e2e8f0;
+        }
+
+        .log-entry .constraint {
+            color: #3b82f6;
+        }
+
+        .log-entry .time {
+            color: #64748b;
+        }
+
+        /* Settings */
+        .settings {
+            background: #1e293b;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .settings-header {
+            padding: 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .settings-header:hover {
+            background: #334155;
+            border-radius: 8px;
+        }
+
+        .settings-content {
+            padding: 0 16px 16px;
+            display: none;
+        }
+
+        .settings-content.open {
+            display: block;
+        }
+
+        .settings-group {
+            margin-bottom: 16px;
+        }
+
+        .settings-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+
+        .settings-group input {
+            width: 100%;
+            padding: 10px 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            color: #e2e8f0;
+            font-size: 0.9rem;
+        }
+
+        .settings-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal h2 {
+            margin-bottom: 16px;
+        }
+
+        .modal p {
+            color: #94a3b8;
+            margin-bottom: 16px;
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            color: #e2e8f0;
+            font-size: 1rem;
+            margin-bottom: 16px;
+        }
+
+        .modal input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+        }
+
+        .toast {
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            animation: slide-in 0.3s ease;
+        }
+
+        @keyframes slide-in {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toast.success {
+            background: #22c55e;
+            color: white;
+        }
+
+        .toast.error {
+            background: #ef4444;
+            color: white;
+        }
+
+        .toast.info {
+            background: #3b82f6;
+            color: white;
+        }
+
+        /* Shift Modal */
+        .shift-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1002;
+        }
+
+        .shift-modal.open {
+            display: flex;
+        }
+
+        .shift-modal-content {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .shift-modal h2 {
+            margin-bottom: 16px;
+            color: #e2e8f0;
+        }
+
+        .shift-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .shift-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            background: #334155;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .shift-checkbox:hover {
+            background: #475569;
+        }
+
+        .shift-checkbox input {
+            width: 18px;
+            height: 18px;
+            accent-color: #3b82f6;
+            cursor: pointer;
+        }
+
+        .shift-checkbox span {
+            color: #e2e8f0;
+            font-size: 0.9rem;
+        }
+
+        #startAuditBtn {
+            width: 100%;
+            padding: 14px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        #startAuditBtn:hover:not(:disabled) {
+            background: #2563eb;
+        }
+
+        #startAuditBtn:disabled {
+            background: #64748b;
+            cursor: not-allowed;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-stats {
+                flex-wrap: wrap;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>HHG Skill Audit</h1>
+            <label class="audit-date-label">
+                Audit Date:
+                <input type="date" id="auditDate">
+            </label>
+            <div class="pending-indicator" id="pendingIndicator">
+                Press A/S/D/F for: <span id="pendingPerson"></span>
+            </div>
+            <div class="header-stats">
+                <div>Shift: <span id="shiftCount">0</span> people</div>
+                <div>Logged: <span id="logCount">0</span></div>
+                <div>Session: <span id="sessionTimer">00:00:00</span></div>
+            </div>
+        </header>
+
+        <div class="matrix-container">
+            <table class="matrix" id="matrix">
+                <!-- Rendered by JS -->
+            </table>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-danger" id="clearBtn">Clear Session</button>
+            <button class="btn btn-primary" id="exportBtn">Export to Notion</button>
+            <button class="btn btn-secondary" id="downloadBtn">Download JSON</button>
+        </div>
+
+        <div class="keyboard-guide">
+            <strong>Keyboard:</strong>
+            People: <kbd>1</kbd>-<kbd>9</kbd>, <kbd>0</kbd>, <kbd>Q</kbd>, <kbd>W</kbd>, <kbd>E</kbd>, <kbd>R</kbd> |
+            Constraints: <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <kbd>F</kbd> |
+            Undo: <kbd>Z</kbd>
+        </div>
+
+        <div class="recent-logs">
+            <h3>Recent Logs (last 10)</h3>
+            <div class="recent-logs-list" id="recentLogs">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+
+        <div class="settings">
+            <div class="settings-header" id="settingsToggle">
+                <span>▶ Settings</span>
+            </div>
+            <div class="settings-content" id="settingsContent">
+                <div class="settings-group">
+                    <label>Current Shift</label>
+                    <p id="currentShiftDisplay" style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px;">No shift selected</p>
+                    <button class="btn btn-secondary" id="editShiftBtn">Edit Shift</button>
+                </div>
+                <div class="settings-group" style="margin-top: 16px;">
+                    <label>Notion Database ID</label>
+                    <input type="text" id="notionDbId" placeholder="Database ID">
+                </div>
+                <button class="btn btn-secondary" id="saveSettingsBtn">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modal">
+            <h2 id="modalTitle">Modal Title</h2>
+            <p id="modalContent">Modal content</p>
+            <input type="text" id="modalInput" style="display: none;">
+            <div class="modal-buttons" id="modalButtons">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="shift-modal" id="shiftModal">
+        <div class="shift-modal-content">
+            <h2>Who's working this shift?</h2>
+            <div class="shift-grid" id="shiftGrid">
+                <!-- Generated by JS -->
+            </div>
+            <button id="startAuditBtn" disabled>Start Audit (0 selected)</button>
+        </div>
+    </div>
+
+    <script>
+        // ══════════════════════════════════════════════════════════════════════════════
+        // LOGGING UTILITY
+        // ══════════════════════════════════════════════════════════════════════════════
+        const LOG = {
+            enter: (fn, params) => console.log(
+                `%c[${fn}] ▶ ENTER`, 'color: #3b82f6; font-weight: bold',
+                params ? `| params:` : '', params || ''
+            ),
+            exit: (fn, result) => console.log(
+                `%c[${fn}] ✓ EXIT`, 'color: #22c55e; font-weight: bold',
+                result !== undefined ? `| result:` : '', result !== undefined ? result : ''
+            ),
+            error: (fn, err) => console.error(
+                `%c[${fn}] ✗ ERROR`, 'color: #ef4444; font-weight: bold',
+                `|`, err
+            ),
+            data: (fn, label, data) => console.log(
+                `%c[${fn}] 📊 ${label}`, 'color: #a855f7', data
+            ),
+            state: (fn, key, oldVal, newVal) => console.log(
+                `%c[${fn}] 🔄 STATE`, 'color: #f97316',
+                `| ${key}: ${JSON.stringify(oldVal)} → ${JSON.stringify(newVal)}`
+            ),
+            action: (fn, action) => console.log(
+                `%c[${fn}] 👆 ACTION`, 'color: #06b6d4; font-weight: bold', `| ${action}`
+            ),
+            network: (fn, method, url, status) => console.log(
+                `%c[${fn}] 🌐 ${method}`, status >= 400 ? 'color: #ef4444' : 'color: #22c55e',
+                `| ${url} | Status: ${status}`
+            ),
+            warn: (fn, msg) => console.warn(
+                `%c[${fn}] ⚠ WARN`, 'color: #eab308; font-weight: bold', `| ${msg}`
+            )
+        };
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // CONFIGURATION
+        // ══════════════════════════════════════════════════════════════════════════════
+        const TEAM = [
+            'Lydell Tyler',
+            'Efrain Campos',
+            'Ismael Costilla',
+            'Lizbeth Espinoza',
+            'Anthony Esparza',
+            'David Slavoff',
+            'Refugio Guzman',
+            'Sarah Lopez',
+            'Edgar Jaimes',
+            'David Crafton',
+            'Anthony Gonzalez',
+            'Brittany Gomez',
+            'Floyd Jefferson',
+            'Erin Hirtzig'
+        ];
+
+        const CONSTRAINTS = [
+            {
+                id: 'buffer',
+                name: 'Buffer',
+                fullName: 'Buffer State',
+                station: 'Cook',
+                key: 'a',
+                question: 'Is hot-hold at ≥80%?'
+            },
+            {
+                id: 'staging',
+                name: 'Staging',
+                fullName: 'Staging Limit',
+                station: 'Mid-pack',
+                key: 's',
+                question: 'Are there ≤4 bowls?'
+            },
+            {
+                id: 'docking',
+                name: 'Docking',
+                fullName: 'Order Docking',
+                station: 'Mid-pack',
+                key: 'd',
+                question: 'All items grouped together?'
+            },
+            {
+                id: 'focus',
+                name: 'Focus',
+                fullName: 'Single Focus',
+                station: 'Expo',
+                key: 'f',
+                question: 'Only 1 order in work zone?'
+            }
+        ];
+
+        const STATIONS = ['Cook', 'Mid-pack', 'Expo', 'Float'];
+
+        const NOTION_CONFIG = {
+            // Token removed - now stored securely in Cloudflare Worker
+            databaseId: '2c501ad84ed881aa9907c7937bde8d0d'
+        };
+
+        const PERSON_KEYS = {
+            '1': 0,
+            '2': 1,
+            '3': 2,
+            '4': 3,
+            '5': 4,
+            '6': 5,
+            '7': 6,
+            '8': 7,
+            '9': 8,
+            '0': 9,
+            'q': 10,
+            'w': 11,
+            'e': 12,
+            'r': 13
+        };
+
+        const CONSTRAINT_KEYS = {
+            'a': 0,
+            's': 1,
+            'd': 2,
+            'f': 3
+        };
+
+        const STORAGE_KEY = 'hhg_skill_audit_state';
+        const SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000; // 8 hours
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // STATE
+        // ══════════════════════════════════════════════════════════════════════════════
+        let state = {
+            sessionId: null,
+            sessionStart: null,
+            auditDate: null,
+            shiftEmployees: [],
+            logs: [],
+            counts: {}
+        };
+
+        let pendingPersonIndex = null;
+        let timerInterval = null;
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // UTILITIES
+        // ══════════════════════════════════════════════════════════════════════════════
+        function generateUUID() {
+            LOG.enter('generateUUID');
+            try {
+                const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = Math.random() * 16 | 0;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+                LOG.exit('generateUUID', uuid);
+                return uuid;
+            } catch (err) {
+                LOG.error('generateUUID', err);
+                throw err;
+            }
+        }
+
+        function generateSessionId() {
+            LOG.enter('generateSessionId');
+            try {
+                const now = new Date();
+                const sessionId = now.getFullYear().toString() +
+                    String(now.getMonth() + 1).padStart(2, '0') +
+                    String(now.getDate()).padStart(2, '0') + '_' +
+                    String(now.getHours()).padStart(2, '0') +
+                    String(now.getMinutes()).padStart(2, '0') +
+                    String(now.getSeconds()).padStart(2, '0');
+                LOG.exit('generateSessionId', sessionId);
+                return sessionId;
+            } catch (err) {
+                LOG.error('generateSessionId', err);
+                throw err;
+            }
+        }
+
+        function getInitials(fullName) {
+            LOG.enter('getInitials', { fullName });
+            try {
+                const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
+                LOG.exit('getInitials', initials);
+                return initials;
+            } catch (err) {
+                LOG.error('getInitials', err);
+                throw err;
+            }
+        }
+
+        function formatTime(ms, silent = false) {
+            if (!silent) LOG.enter('formatTime', { ms });
+            try {
+                const seconds = Math.floor(ms / 1000);
+                const h = Math.floor(seconds / 3600);
+                const m = Math.floor((seconds % 3600) / 60);
+                const s = seconds % 60;
+                const formatted = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                if (!silent) LOG.exit('formatTime', formatted);
+                return formatted;
+            } catch (err) {
+                LOG.error('formatTime', err);
+                throw err;
+            }
+        }
+
+        function getPersonKeyLabel(index) {
+            LOG.enter('getPersonKeyLabel', { index });
+            try {
+                const keyMap = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'Q', 'W', 'E', 'R'];
+                const label = keyMap[index] || '';
+                LOG.exit('getPersonKeyLabel', label);
+                return label;
+            } catch (err) {
+                LOG.error('getPersonKeyLabel', err);
+                throw err;
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // STATE MANAGEMENT
+        // ══════════════════════════════════════════════════════════════════════════════
+        function initializeEmptyCounts() {
+            LOG.enter('initializeEmptyCounts');
+            try {
+                const counts = {};
+                TEAM.forEach(person => {
+                    counts[person] = {
+                        buffer: 0,
+                        staging: 0,
+                        docking: 0,
+                        focus: 0
+                    };
+                });
+                LOG.data('initializeEmptyCounts', 'Empty counts', counts);
+                LOG.exit('initializeEmptyCounts', counts);
+                return counts;
+            } catch (err) {
+                LOG.error('initializeEmptyCounts', err);
+                throw err;
+            }
+        }
+
+        function loadState() {
+            LOG.enter('loadState');
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (!stored) {
+                    LOG.warn('loadState', 'No stored state found, creating fresh session');
+                    state = createFreshState();
+                    LOG.exit('loadState', 'Fresh state created');
+                    return;
+                }
+
+                const parsed = JSON.parse(stored);
+                LOG.data('loadState', 'Parsed state', parsed);
+
+                // Check 8-hour timeout
+                const elapsed = Date.now() - parsed.sessionStart;
+                if (elapsed > SESSION_TIMEOUT_MS) {
+                    LOG.warn('loadState', `Session expired (${formatTime(elapsed)} elapsed), creating fresh session`);
+                    state = createFreshState();
+                    LOG.exit('loadState', 'Fresh state created due to timeout');
+                    return;
+                }
+
+                state = parsed;
+
+                // Ensure auditDate exists (for sessions created before this update)
+                if (!state.auditDate) {
+                    state.auditDate = new Date().toISOString().split('T')[0];
+                }
+
+                // Ensure shiftEmployees exists (for sessions created before this update)
+                if (!state.shiftEmployees) {
+                    state.shiftEmployees = [];
+                }
+
+                LOG.state('loadState', 'state', null, state);
+                LOG.exit('loadState', 'State restored');
+            } catch (err) {
+                LOG.error('loadState', err);
+                state = createFreshState();
+            }
+        }
+
+        function createFreshState() {
+            LOG.enter('createFreshState');
+            try {
+                const freshState = {
+                    sessionId: generateSessionId(),
+                    sessionStart: Date.now(),
+                    auditDate: new Date().toISOString().split('T')[0],
+                    shiftEmployees: [],
+                    logs: [],
+                    counts: initializeEmptyCounts()
+                };
+                LOG.data('createFreshState', 'Fresh state', freshState);
+                LOG.exit('createFreshState', freshState);
+                return freshState;
+            } catch (err) {
+                LOG.error('createFreshState', err);
+                throw err;
+            }
+        }
+
+        function saveState() {
+            LOG.enter('saveState');
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                LOG.data('saveState', 'Saved state', state);
+                LOG.exit('saveState');
+            } catch (err) {
+                LOG.error('saveState', err);
+                throw err;
+            }
+        }
+
+        function addLog(person, constraint) {
+            LOG.enter('addLog', { person, constraint });
+            try {
+                LOG.action('addLog', `Logging ${constraint.name} violation for ${person}`);
+
+                const logEntry = {
+                    id: generateUUID(),
+                    person: person,
+                    constraint: constraint.name,
+                    station: constraint.station,
+                    timestamp: new Date().toISOString()
+                };
+
+                LOG.data('addLog', 'New log entry', logEntry);
+
+                const oldCount = state.counts[person][constraint.id];
+                state.logs.push(logEntry);
+                state.counts[person][constraint.id]++;
+                LOG.state('addLog', `counts.${person}.${constraint.id}`, oldCount, state.counts[person][constraint.id]);
+
+                saveState();
+                updateCounts();
+                renderRecentLogs();
+                updateLogCount();
+
+                LOG.exit('addLog', logEntry);
+                return logEntry;
+            } catch (err) {
+                LOG.error('addLog', err);
+                throw err;
+            }
+        }
+
+        function undoLastLog() {
+            LOG.enter('undoLastLog');
+            try {
+                if (state.logs.length === 0) {
+                    LOG.warn('undoLastLog', 'No logs to undo');
+                    showToast('Nothing to undo', 'info');
+                    LOG.exit('undoLastLog', false);
+                    return false;
+                }
+
+                const lastLog = state.logs.pop();
+                LOG.data('undoLastLog', 'Removed log', lastLog);
+
+                const constraintId = lastLog.constraint.toLowerCase();
+                const oldCount = state.counts[lastLog.person][constraintId];
+                state.counts[lastLog.person][constraintId]--;
+                LOG.state('undoLastLog', `counts.${lastLog.person}.${constraintId}`, oldCount, state.counts[lastLog.person][constraintId]);
+
+                saveState();
+                updateCounts();
+                renderRecentLogs();
+                updateLogCount();
+                showToast(`Undid: ${lastLog.person} → ${lastLog.constraint}`, 'info');
+
+                LOG.exit('undoLastLog', true);
+                return true;
+            } catch (err) {
+                LOG.error('undoLastLog', err);
+                throw err;
+            }
+        }
+
+        function clearSession() {
+            LOG.enter('clearSession');
+            try {
+                LOG.action('clearSession', 'Clearing session');
+                state = createFreshState();
+                saveState();
+                renderMatrix();
+                renderRecentLogs();
+                updateLogCount();
+                showToast('Session cleared', 'success');
+                LOG.exit('clearSession');
+            } catch (err) {
+                LOG.error('clearSession', err);
+                throw err;
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // UI RENDERING
+        // ══════════════════════════════════════════════════════════════════════════════
+        function renderMatrix() {
+            LOG.enter('renderMatrix');
+            try {
+                const matrix = document.getElementById('matrix');
+                const shiftTeam = getShiftTeam();
+
+                LOG.data('renderMatrix', 'Rendering employees', shiftTeam.length);
+
+                if (shiftTeam.length === 0) {
+                    matrix.innerHTML = '<tbody><tr><td style="padding: 24px; color: #94a3b8;">No employees selected. Click Settings to edit shift.</td></tr></tbody>';
+                    LOG.exit('renderMatrix', 'Empty shift');
+                    return;
+                }
+
+                let html = '<thead><tr><th></th>';
+
+                // Header row with constraints
+                CONSTRAINTS.forEach(c => {
+                    html += `<th>
+                        ${c.name}<span class="key-badge">${c.key.toUpperCase()}</span>
+                        <span class="station">${c.station}</span>
+                    </th>`;
+                });
+                html += '</tr></thead><tbody>';
+
+                // Person rows - ONLY for shift employees
+                shiftTeam.forEach((person, displayIndex) => {
+                    const actualIndex = state.shiftEmployees[displayIndex];
+                    const keyHint = getPersonKeyHint(displayIndex);
+
+                    html += `<tr>
+                        <td class="person-cell">
+                            <span class="key-badge">${keyHint}</span>
+                            ${person}
+                        </td>`;
+
+                    CONSTRAINTS.forEach((constraint, constraintIndex) => {
+                        const count = state.counts[person]?.[constraint.id] || 0;
+                        html += `<td class="count-cell" data-person="${actualIndex}" data-constraint="${constraintIndex}">
+                            <span class="count ${count > 0 ? 'has-value' : ''}">${count > 0 ? count : ''}</span>
+                        </td>`;
+                    });
+
+                    html += '</tr>';
+                });
+
+                html += '</tbody>';
+                matrix.innerHTML = html;
+
+                // Attach click handlers
+                matrix.querySelectorAll('.count-cell').forEach(cell => {
+                    cell.addEventListener('click', () => {
+                        const personIndex = parseInt(cell.dataset.person);
+                        const constraintIndex = parseInt(cell.dataset.constraint);
+                        handleCellClick(personIndex, constraintIndex);
+                    });
+                });
+
+                LOG.exit('renderMatrix');
+            } catch (err) {
+                LOG.error('renderMatrix', err);
+                throw err;
+            }
+        }
+
+        function updateCounts() {
+            LOG.enter('updateCounts');
+            try {
+                document.querySelectorAll('.count-cell').forEach(cell => {
+                    const personIndex = parseInt(cell.dataset.person);
+                    const constraintIndex = parseInt(cell.dataset.constraint);
+                    const person = TEAM[personIndex];
+                    const constraint = CONSTRAINTS[constraintIndex];
+                    const count = state.counts[person]?.[constraint.id] || 0;
+                    const countSpan = cell.querySelector('.count');
+                    countSpan.textContent = count > 0 ? count : '';
+                    countSpan.classList.toggle('has-value', count > 0);
+                });
+                LOG.exit('updateCounts');
+            } catch (err) {
+                LOG.error('updateCounts', err);
+                throw err;
+            }
+        }
+
+        function flashCell(personIndex, constraintIndex) {
+            LOG.enter('flashCell', { personIndex, constraintIndex });
+            try {
+                const cell = document.querySelector(`.count-cell[data-person="${personIndex}"][data-constraint="${constraintIndex}"]`);
+                if (cell) {
+                    cell.classList.add('flash');
+                    setTimeout(() => cell.classList.remove('flash'), 300);
+                }
+                LOG.exit('flashCell');
+            } catch (err) {
+                LOG.error('flashCell', err);
+                throw err;
+            }
+        }
+
+        function renderRecentLogs() {
+            LOG.enter('renderRecentLogs');
+            try {
+                const container = document.getElementById('recentLogs');
+                const recentLogs = state.logs.slice(-10).reverse();
+
+                if (recentLogs.length === 0) {
+                    container.innerHTML = '<div style="color: #64748b; padding: 8px;">No logs yet</div>';
+                    LOG.exit('renderRecentLogs', 'Empty');
+                    return;
+                }
+
+                let html = '';
+                recentLogs.forEach(log => {
+                    const time = new Date(log.timestamp).toLocaleTimeString();
+                    html += `<div class="log-entry">
+                        <span><span class="person">${log.person}</span> → <span class="constraint">${log.constraint}</span></span>
+                        <span class="time">${time}</span>
+                    </div>`;
+                });
+
+                container.innerHTML = html;
+                LOG.exit('renderRecentLogs', `${recentLogs.length} logs rendered`);
+            } catch (err) {
+                LOG.error('renderRecentLogs', err);
+                throw err;
+            }
+        }
+
+        function updateLogCount() {
+            LOG.enter('updateLogCount');
+            try {
+                document.getElementById('logCount').textContent = state.logs.length;
+                LOG.exit('updateLogCount', state.logs.length);
+            } catch (err) {
+                LOG.error('updateLogCount', err);
+                throw err;
+            }
+        }
+
+        function updateSessionTimer() {
+            // No logging - runs every second, creates noise
+            try {
+                if (!state.sessionStart) {
+                    return;
+                }
+                const elapsed = Date.now() - state.sessionStart;
+                document.getElementById('sessionTimer').textContent = formatTime(elapsed, true);
+            } catch (err) {
+                LOG.error('updateSessionTimer', err);
+            }
+        }
+
+        function updatePendingIndicator() {
+            LOG.enter('updatePendingIndicator');
+            try {
+                const indicator = document.getElementById('pendingIndicator');
+                const personSpan = document.getElementById('pendingPerson');
+
+                if (pendingPersonIndex !== null) {
+                    personSpan.textContent = TEAM[pendingPersonIndex];
+                    indicator.classList.add('active');
+                } else {
+                    indicator.classList.remove('active');
+                }
+                LOG.exit('updatePendingIndicator', pendingPersonIndex);
+            } catch (err) {
+                LOG.error('updatePendingIndicator', err);
+                throw err;
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // SHIFT SELECTION
+        // ══════════════════════════════════════════════════════════════════════════════
+        function buildShiftGrid() {
+            LOG.enter('buildShiftGrid');
+            try {
+                const grid = document.getElementById('shiftGrid');
+                grid.innerHTML = '';
+
+                TEAM.forEach((person, index) => {
+                    const label = document.createElement('label');
+                    label.className = 'shift-checkbox';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.dataset.index = index;
+                    checkbox.checked = state.shiftEmployees.includes(index);
+                    checkbox.addEventListener('change', updateShiftButtonCount);
+
+                    const span = document.createElement('span');
+                    span.textContent = person;
+
+                    label.appendChild(checkbox);
+                    label.appendChild(span);
+                    grid.appendChild(label);
+                });
+
+                updateShiftButtonCount();
+                LOG.exit('buildShiftGrid');
+            } catch (err) {
+                LOG.error('buildShiftGrid', err);
+                throw err;
+            }
+        }
+
+        function showShiftModal() {
+            LOG.enter('showShiftModal');
+            try {
+                buildShiftGrid();
+                document.getElementById('shiftModal').classList.add('open');
+                LOG.exit('showShiftModal');
+            } catch (err) {
+                LOG.error('showShiftModal', err);
+                throw err;
+            }
+        }
+
+        function hideShiftModal() {
+            LOG.enter('hideShiftModal');
+            try {
+                document.getElementById('shiftModal').classList.remove('open');
+                LOG.exit('hideShiftModal');
+            } catch (err) {
+                LOG.error('hideShiftModal', err);
+                throw err;
+            }
+        }
+
+        function updateShiftButtonCount() {
+            LOG.enter('updateShiftButtonCount');
+            try {
+                const checkboxes = document.querySelectorAll('#shiftGrid input[type="checkbox"]:checked');
+                const count = checkboxes.length;
+                const btn = document.getElementById('startAuditBtn');
+                btn.textContent = `Start Audit (${count} selected)`;
+                btn.disabled = count === 0;
+                LOG.exit('updateShiftButtonCount', count);
+            } catch (err) {
+                LOG.error('updateShiftButtonCount', err);
+                throw err;
+            }
+        }
+
+        function confirmShiftSelection() {
+            LOG.enter('confirmShiftSelection');
+            try {
+                const checkboxes = document.querySelectorAll('#shiftGrid input[type="checkbox"]:checked');
+                const oldShift = [...state.shiftEmployees];
+
+                state.shiftEmployees = Array.from(checkboxes).map(cb => parseInt(cb.dataset.index));
+
+                LOG.state('confirmShiftSelection', 'shiftEmployees', oldShift, state.shiftEmployees);
+
+                if (state.shiftEmployees.length === 0) {
+                    showToast('Select at least one employee', 'error');
+                    LOG.warn('confirmShiftSelection', 'No employees selected');
+                    LOG.exit('confirmShiftSelection', false);
+                    return;
+                }
+
+                saveState();
+                hideShiftModal();
+                renderMatrix();
+                updateShiftDisplay();
+                updateKeyboardHints();
+
+                LOG.exit('confirmShiftSelection', state.shiftEmployees.length);
+            } catch (err) {
+                LOG.error('confirmShiftSelection', err);
+                throw err;
+            }
+        }
+
+        function getShiftTeam() {
+            LOG.enter('getShiftTeam');
+            try {
+                const team = state.shiftEmployees.map(idx => TEAM[idx]);
+                LOG.exit('getShiftTeam', team);
+                return team;
+            } catch (err) {
+                LOG.error('getShiftTeam', err);
+                throw err;
+            }
+        }
+
+        function updateShiftDisplay() {
+            LOG.enter('updateShiftDisplay');
+            try {
+                const shiftTeam = getShiftTeam();
+                const display = document.getElementById('currentShiftDisplay');
+                const countDisplay = document.getElementById('shiftCount');
+
+                countDisplay.textContent = shiftTeam.length;
+                display.textContent = shiftTeam.length > 0
+                    ? `Auditing: ${shiftTeam.join(', ')}`
+                    : 'No shift selected';
+
+                LOG.exit('updateShiftDisplay');
+            } catch (err) {
+                LOG.error('updateShiftDisplay', err);
+                throw err;
+            }
+        }
+
+        function getPersonKeyHint(displayIndex) {
+            LOG.enter('getPersonKeyHint', { displayIndex });
+            try {
+                let hint;
+                if (displayIndex < 9) {
+                    hint = (displayIndex + 1).toString();
+                } else if (displayIndex === 9) {
+                    hint = '0';
+                } else {
+                    const extras = ['Q', 'W', 'E', 'R'];
+                    hint = extras[displayIndex - 10] || '?';
+                }
+                LOG.exit('getPersonKeyHint', hint);
+                return hint;
+            } catch (err) {
+                LOG.error('getPersonKeyHint', err);
+                throw err;
+            }
+        }
+
+        function updateKeyboardHints() {
+            LOG.enter('updateKeyboardHints');
+            try {
+                const shiftTeam = getShiftTeam();
+                const len = shiftTeam.length;
+
+                let maxKey;
+                if (len === 0) {
+                    maxKey = '?';
+                } else if (len <= 9) {
+                    maxKey = len.toString();
+                } else if (len === 10) {
+                    maxKey = '0';
+                } else {
+                    const extras = ['Q', 'W', 'E', 'R'];
+                    maxKey = extras[len - 11] || 'R';
+                }
+
+                const hintsEl = document.querySelector('.keyboard-guide');
+                if (len > 0) {
+                    hintsEl.innerHTML = `<strong>Keyboard:</strong> People: <kbd>1</kbd>-<kbd>${maxKey}</kbd> | Constraints: <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <kbd>F</kbd> | Undo: <kbd>Z</kbd>`;
+                }
+
+                LOG.exit('updateKeyboardHints');
+            } catch (err) {
+                LOG.error('updateKeyboardHints', err);
+                throw err;
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // MODAL & TOAST
+        // ══════════════════════════════════════════════════════════════════════════════
+        function showModal(title, content, buttons, showInput = false, inputPlaceholder = '') {
+            LOG.enter('showModal', { title, content, showInput });
+            try {
+                document.getElementById('modalTitle').textContent = title;
+                document.getElementById('modalContent').textContent = content;
+
+                const inputEl = document.getElementById('modalInput');
+                inputEl.style.display = showInput ? 'block' : 'none';
+                inputEl.value = '';
+                inputEl.placeholder = inputPlaceholder;
+
+                const buttonsContainer = document.getElementById('modalButtons');
+                buttonsContainer.innerHTML = '';
+
+                buttons.forEach(btn => {
+                    const button = document.createElement('button');
+                    button.className = `btn ${btn.class || 'btn-secondary'}`;
+                    button.textContent = btn.text;
+                    button.addEventListener('click', () => {
+                        hideModal();
+                        if (btn.callback) {
+                            btn.callback(showInput ? inputEl.value : null);
+                        }
+                    });
+                    buttonsContainer.appendChild(button);
+                });
+
+                document.getElementById('modalOverlay').classList.add('open');
+
+                if (showInput) {
+                    setTimeout(() => inputEl.focus(), 100);
+                }
+
+                LOG.exit('showModal');
+            } catch (err) {
+                LOG.error('showModal', err);
+                throw err;
+            }
+        }
+
+        function hideModal() {
+            LOG.enter('hideModal');
+            try {
+                document.getElementById('modalOverlay').classList.remove('open');
+                LOG.exit('hideModal');
+            } catch (err) {
+                LOG.error('hideModal', err);
+                throw err;
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            LOG.enter('showToast', { message, type });
+            try {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                container.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+
+                LOG.exit('showToast');
+            } catch (err) {
+                LOG.error('showToast', err);
+                throw err;
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // EVENT HANDLERS
+        // ══════════════════════════════════════════════════════════════════════════════
+        function handleCellClick(personIndex, constraintIndex) {
+            LOG.enter('handleCellClick', { personIndex, constraintIndex });
+            try {
+                const person = TEAM[personIndex];
+                const constraint = CONSTRAINTS[constraintIndex];
+
+                LOG.action('handleCellClick', `Clicked cell: ${person} → ${constraint.name}`);
+
+                addLog(person, constraint);
+                flashCell(personIndex, constraintIndex);
+
+                LOG.exit('handleCellClick');
+            } catch (err) {
+                LOG.error('handleCellClick', err);
+                throw err;
+            }
+        }
+
+        function handleKeydown(event) {
+            LOG.enter('handleKeydown', { key: event.key });
+            try {
+                // Ignore if typing in input
+                if (event.target.tagName === 'INPUT') {
+                    LOG.exit('handleKeydown', 'Ignored - input focused');
+                    return;
+                }
+
+                const key = event.key.toLowerCase();
+                const shiftTeam = getShiftTeam();
+
+                // Dynamic person keys based on shift size
+                let personDisplayIndex = null;
+
+                if (key >= '1' && key <= '9') {
+                    personDisplayIndex = parseInt(key) - 1;
+                } else if (key === '0') {
+                    personDisplayIndex = 9;
+                } else if (key === 'q') {
+                    personDisplayIndex = 10;
+                } else if (key === 'w') {
+                    personDisplayIndex = 11;
+                } else if (key === 'e') {
+                    personDisplayIndex = 12;
+                } else if (key === 'r') {
+                    personDisplayIndex = 13;
+                }
+
+                // Person keys - check if valid for current shift size
+                if (personDisplayIndex !== null && personDisplayIndex < shiftTeam.length) {
+                    LOG.action('handleKeydown', `Person key pressed: ${key}`);
+                    pendingPersonIndex = state.shiftEmployees[personDisplayIndex];
+                    updatePendingIndicator();
+                    LOG.state('handleKeydown', 'pendingPersonIndex', null, pendingPersonIndex);
+                    LOG.exit('handleKeydown', 'Person selected');
+                    return;
+                }
+
+                // Constraint keys
+                if (key in CONSTRAINT_KEYS && pendingPersonIndex !== null) {
+                    LOG.action('handleKeydown', `Constraint key pressed: ${key}`);
+                    const constraintIndex = CONSTRAINT_KEYS[key];
+                    const person = TEAM[pendingPersonIndex];
+                    const constraint = CONSTRAINTS[constraintIndex];
+
+                    addLog(person, constraint);
+                    flashCell(pendingPersonIndex, constraintIndex);
+
+                    pendingPersonIndex = null;
+                    updatePendingIndicator();
+                    LOG.exit('handleKeydown', 'Log added');
+                    return;
+                }
+
+                // Undo
+                if (key === 'z') {
+                    LOG.action('handleKeydown', 'Undo key pressed');
+                    undoLastLog();
+                    LOG.exit('handleKeydown', 'Undo performed');
+                    return;
+                }
+
+                // Escape - clear pending
+                if (key === 'escape') {
+                    LOG.action('handleKeydown', 'Escape pressed');
+                    pendingPersonIndex = null;
+                    updatePendingIndicator();
+                    LOG.exit('handleKeydown', 'Pending cleared');
+                    return;
+                }
+
+                LOG.exit('handleKeydown', 'No action');
+            } catch (err) {
+                LOG.error('handleKeydown', err);
+                throw err;
+            }
+        }
+
+        function handleDateChange(event) {
+            LOG.enter('handleDateChange', { value: event.target.value });
+            try {
+                const oldDate = state.auditDate;
+                state.auditDate = event.target.value;
+                LOG.state('handleDateChange', 'auditDate', oldDate, state.auditDate);
+                saveState();
+                LOG.exit('handleDateChange');
+            } catch (err) {
+                LOG.error('handleDateChange', err);
+                throw err;
+            }
+        }
+
+        function handleClearClick() {
+            LOG.enter('handleClearClick');
+            try {
+                showModal(
+                    'Clear Session?',
+                    `This will permanently delete ${state.logs.length} logs. This action cannot be undone.`,
+                    [
+                        { text: 'Cancel', class: 'btn-secondary' },
+                        { text: 'Clear', class: 'btn-danger', callback: clearSession }
+                    ]
+                );
+                LOG.exit('handleClearClick');
+            } catch (err) {
+                LOG.error('handleClearClick', err);
+                throw err;
+            }
+        }
+
+        function handleExportClick() {
+            LOG.enter('handleExportClick');
+            try {
+                if (state.logs.length === 0) {
+                    showToast('No logs to export', 'info');
+                    LOG.exit('handleExportClick', 'No logs');
+                    return;
+                }
+
+                showModal(
+                    'Export to Notion',
+                    'Enter the total number of orders for this session:',
+                    [
+                        { text: 'Cancel', class: 'btn-secondary' },
+                        { text: 'Export', class: 'btn-primary', callback: (value) => {
+                            const totalOrders = parseInt(value);
+                            if (isNaN(totalOrders) || totalOrders <= 0) {
+                                showToast('Please enter a valid number', 'error');
+                                return;
+                            }
+                            exportToNotion(totalOrders);
+                        }}
+                    ],
+                    true,
+                    'Total orders...'
+                );
+                LOG.exit('handleExportClick');
+            } catch (err) {
+                LOG.error('handleExportClick', err);
+                throw err;
+            }
+        }
+
+        function handleDownloadClick() {
+            LOG.enter('handleDownloadClick');
+            try {
+                const data = {
+                    sessionId: state.sessionId,
+                    exportDate: new Date().toISOString(),
+                    logs: state.logs,
+                    aggregated: aggregateLogsByPerson()
+                };
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `skill-audit-${state.sessionId}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showToast('JSON downloaded', 'success');
+                LOG.exit('handleDownloadClick');
+            } catch (err) {
+                LOG.error('handleDownloadClick', err);
+                showToast('Download failed', 'error');
+                throw err;
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // NOTION EXPORT
+        // ══════════════════════════════════════════════════════════════════════════════
+        function aggregateLogsByPerson() {
+            LOG.enter('aggregateLogsByPerson');
+            try {
+                const aggregated = {};
+
+                state.logs.forEach(log => {
+                    if (!aggregated[log.person]) {
+                        aggregated[log.person] = {
+                            buffer: 0,
+                            staging: 0,
+                            docking: 0,
+                            focus: 0,
+                            station: log.station
+                        };
+                    }
+                    const constraintId = log.constraint.toLowerCase();
+                    aggregated[log.person][constraintId]++;
+                });
+
+                LOG.data('aggregateLogsByPerson', 'Aggregated data', aggregated);
+                LOG.exit('aggregateLogsByPerson', aggregated);
+                return aggregated;
+            } catch (err) {
+                LOG.error('aggregateLogsByPerson', err);
+                throw err;
+            }
+        }
+
+        function generateTitle(person, date) {
+            LOG.enter('generateTitle', { person, date });
+            try {
+                // Parse YYYY-MM-DD format directly to MMDDYY
+                const [year, month, day] = date.split('-');
+                const dateStr = `${month}${day}${year.slice(-2)}`;
+
+                // Get primary station from logs for this person
+                const personLogs = state.logs.filter(l => l.person === person);
+                const stationCounts = {};
+                personLogs.forEach(l => {
+                    stationCounts[l.station] = (stationCounts[l.station] || 0) + 1;
+                });
+                const station = Object.keys(stationCounts).sort((a, b) => stationCounts[b] - stationCounts[a])[0] || 'Unknown';
+
+                const initials = getInitials(person);
+                const title = `SA-${dateStr}-${station}-${initials}`;
+
+                LOG.exit('generateTitle', title);
+                return title;
+            } catch (err) {
+                LOG.error('generateTitle', err);
+                throw err;
+            }
+        }
+
+        async function createNotionRow(person, counts, totalOrders, date) {
+            LOG.enter('createNotionRow', { person, counts, totalOrders, date });
+            try {
+                const title = generateTitle(person, date);
+                const dateStr = date;  // Already in YYYY-MM-DD format from state.auditDate
+
+                // Get primary station
+                const personLogs = state.logs.filter(l => l.person === person);
+                const stationCounts = {};
+                personLogs.forEach(l => {
+                    stationCounts[l.station] = (stationCounts[l.station] || 0) + 1;
+                });
+                const station = Object.keys(stationCounts).sort((a, b) => stationCounts[b] - stationCounts[a])[0] || 'Cook';
+
+                const body = {
+                    parent: { database_id: NOTION_CONFIG.databaseId },
+                    properties: {
+                        'Name': {
+                            title: [{ text: { content: title } }]
+                        },
+                        'Team Member': {
+                            select: { name: person }
+                        },
+                        'Station': {
+                            select: { name: station }
+                        },
+                        'Date': {
+                            date: { start: dateStr }
+                        },
+                        'Buffer': {
+                            number: counts.buffer || 0
+                        },
+                        'Staging': {
+                            number: counts.staging || 0
+                        },
+                        'Docking': {
+                            number: counts.docking || 0
+                        },
+                        'Focus': {
+                            number: counts.focus || 0
+                        },
+                        'Total Orders': {
+                            number: totalOrders
+                        }
+                    }
+                };
+
+                LOG.data('createNotionRow', 'Request body', body);
+
+                // Use Cloudflare Worker proxy to bypass CORS
+                const NOTION_PROXY = 'https://muddy-credit-47c7.ladiossato.workers.dev';
+
+                const response = await fetch(NOTION_PROXY, {
+                    method: 'POST',
+                    headers: {
+                        'Notion-Version': '2022-06-28',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                LOG.network('createNotionRow', 'POST', NOTION_PROXY, response.status);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    LOG.error('createNotionRow', errorData);
+                    throw new Error(`Notion API error: ${errorData.message || response.status}`);
+                }
+
+                const result = await response.json();
+                LOG.data('createNotionRow', 'Response', result);
+                LOG.exit('createNotionRow', result.id);
+                return result;
+            } catch (err) {
+                LOG.error('createNotionRow', err);
+                throw err;
+            }
+        }
+
+        async function exportToNotion(totalOrders) {
+            LOG.enter('exportToNotion', { totalOrders });
+            try {
+                const aggregated = aggregateLogsByPerson();
+                const people = Object.keys(aggregated);
+
+                if (people.length === 0) {
+                    showToast('No violations to export', 'info');
+                    LOG.exit('exportToNotion', 'No violations');
+                    return;
+                }
+
+                LOG.data('exportToNotion', 'People to export', people);
+
+                let successCount = 0;
+                let errorCount = 0;
+                const errors = [];
+                const date = state.auditDate;  // Use selected audit date
+
+                for (const person of people) {
+                    try {
+                        await createNotionRow(person, aggregated[person], totalOrders, date);
+                        successCount++;
+                        showToast(`Exported: ${person}`, 'success');
+                    } catch (err) {
+                        errorCount++;
+                        errors.push({ person, error: err.message });
+                    }
+                }
+
+                LOG.data('exportToNotion', 'Export results', { successCount, errorCount });
+
+                if (errorCount > 0) {
+                    showToast(`${errorCount} export(s) failed. Use Download JSON as backup.`, 'error');
+                    LOG.warn('exportToNotion', `${errorCount} exports failed`);
+                } else {
+                    showToast(`Successfully exported ${successCount} records`, 'success');
+
+                    // Offer to clear session
+                    showModal(
+                        'Export Complete',
+                        `Successfully exported ${successCount} records to Notion. Clear session data?`,
+                        [
+                            { text: 'Keep Data', class: 'btn-secondary' },
+                            { text: 'Clear Session', class: 'btn-primary', callback: clearSession }
+                        ]
+                    );
+                }
+
+                LOG.exit('exportToNotion', { successCount, errorCount });
+            } catch (err) {
+                LOG.error('exportToNotion', err);
+                showToast('Export failed. Check console for details.', 'error');
+                throw err;
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // SETTINGS
+        // ══════════════════════════════════════════════════════════════════════════════
+        function loadSettings() {
+            LOG.enter('loadSettings');
+            try {
+                const savedDbId = localStorage.getItem('hhg_notion_db_id');
+
+                if (savedDbId) {
+                    NOTION_CONFIG.databaseId = savedDbId;
+                    document.getElementById('notionDbId').value = savedDbId;
+                } else {
+                    document.getElementById('notionDbId').value = NOTION_CONFIG.databaseId;
+                }
+
+                LOG.exit('loadSettings');
+            } catch (err) {
+                LOG.error('loadSettings', err);
+                throw err;
+            }
+        }
+
+        function saveSettings() {
+            LOG.enter('saveSettings');
+            try {
+                const dbId = document.getElementById('notionDbId').value.trim();
+
+                if (dbId) {
+                    NOTION_CONFIG.databaseId = dbId;
+                    localStorage.setItem('hhg_notion_db_id', dbId);
+                }
+
+                showToast('Settings saved', 'success');
+                LOG.exit('saveSettings');
+            } catch (err) {
+                LOG.error('saveSettings', err);
+                showToast('Failed to save settings', 'error');
+                throw err;
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════
+        // INITIALIZATION
+        // ══════════════════════════════════════════════════════════════════════════════
+        function init() {
+            LOG.enter('init');
+            try {
+                console.log('%c═══════════════════════════════════════════════════════════════════════════════', 'color: #3b82f6');
+                console.log('%c  HHG SKILL AUDIT', 'color: #3b82f6; font-size: 20px; font-weight: bold');
+                console.log('%c  Press F12 to see detailed logs', 'color: #94a3b8');
+                console.log('%c═══════════════════════════════════════════════════════════════════════════════', 'color: #3b82f6');
+
+                LOG.data('init', 'Team members', TEAM);
+                LOG.data('init', 'Constraints', CONSTRAINTS);
+                LOG.data('init', 'Notion config', { databaseId: NOTION_CONFIG.databaseId });
+
+                // Load state
+                loadState();
+                loadSettings();
+
+                // Set audit date picker value
+                document.getElementById('auditDate').value = state.auditDate;
+
+                // Show shift modal if no shift selected, otherwise render matrix
+                if (!state.shiftEmployees || state.shiftEmployees.length === 0) {
+                    showShiftModal();
+                } else {
+                    renderMatrix();
+                    updateShiftDisplay();
+                    updateKeyboardHints();
+                }
+
+                renderRecentLogs();
+                updateLogCount();
+                updateSessionTimer();
+
+                // Start timer
+                timerInterval = setInterval(updateSessionTimer, 1000);
+
+                // Attach event listeners
+                document.addEventListener('keydown', handleKeydown);
+                document.getElementById('auditDate').addEventListener('change', handleDateChange);
+                document.getElementById('startAuditBtn').addEventListener('click', confirmShiftSelection);
+                document.getElementById('editShiftBtn').addEventListener('click', showShiftModal);
+                document.getElementById('clearBtn').addEventListener('click', handleClearClick);
+                document.getElementById('exportBtn').addEventListener('click', handleExportClick);
+                document.getElementById('downloadBtn').addEventListener('click', handleDownloadClick);
+                document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+
+                // Settings toggle
+                document.getElementById('settingsToggle').addEventListener('click', () => {
+                    const content = document.getElementById('settingsContent');
+                    const toggle = document.getElementById('settingsToggle').querySelector('span');
+                    content.classList.toggle('open');
+                    toggle.textContent = content.classList.contains('open') ? '▼ Settings' : '▶ Settings';
+                });
+
+                // Modal close on overlay click
+                document.getElementById('modalOverlay').addEventListener('click', (e) => {
+                    if (e.target.id === 'modalOverlay') {
+                        hideModal();
+                    }
+                });
+
+                LOG.exit('init', 'Initialization complete');
+            } catch (err) {
+                LOG.error('init', err);
+                throw err;
+            }
+        }
+
+        // Run on DOM ready
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
